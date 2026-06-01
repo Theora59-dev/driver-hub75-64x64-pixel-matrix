@@ -1,5 +1,28 @@
 mod color;
+
+use crate::hub75::Hub75Pins;
 pub use color::Rgb565;
+
+pub fn display_frame(pins: &mut Hub75Pins, fb: &PixelMap) {
+    for row in 0..32u8 {
+        pins.oe_off();
+        pins.set_row(row);
+
+        for col in 0..64u8 {
+            let (r1, g1, b1) = fb.read(col as usize, row as usize).to_1bit();
+            let (r2, g2, b2) = fb.read(col as usize, (row as usize) + 32).to_1bit();
+            pins.shift_pixel(r1, g1, b1, r2, g2, b2);
+        }
+
+        pins.latch();
+        pins.oe_on();
+        for _ in 0..20000 {
+            core::hint::spin_loop();
+        }
+    }
+
+    pins.oe_off();
+}
 
 /// Dimensions du panneau : 64×64 pixels.
 pub const WIDTH: usize = 64;

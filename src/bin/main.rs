@@ -6,8 +6,9 @@ use esp_hal::gpio::{Level, Output, OutputConfig};
 use esp_hal::main;
 use esp_hal::time::{Duration, Instant};
 
-use driver_64x64_pixel_matrix::framebuffer::{PixelMap, Rgb565};
+use driver_64x64_pixel_matrix::framebuffer::{PixelMap, Rgb565, display_frame};
 use driver_64x64_pixel_matrix::hub75::Hub75Pins;
+use esp_println::println;
 
 #[panic_handler]
 fn panic(_: &core::panic::PanicInfo) -> ! {
@@ -15,25 +16,6 @@ fn panic(_: &core::panic::PanicInfo) -> ! {
 }
 
 esp_bootloader_esp_idf::esp_app_desc!();
-
-fn display_frame(pins: &mut Hub75Pins, fb: &PixelMap) {
-    for row in 0..32u8 {
-        pins.oe_off();
-        pins.set_row(row);
-
-        for col in 0..64u8 {
-            let (r1, g1, b1) = fb.read(col as usize, row as usize).to_1bit();
-            let (r2, g2, b2) = fb.read(col as usize, (row as usize) + 32).to_1bit();
-            pins.shift_pixel(r1, g1, b1, r2, g2, b2);
-        }
-
-        pins.latch();
-        pins.oe_on();
-        for _ in 0..20000 {
-            core::hint::spin_loop();
-        }
-    }
-}
 
 #[main]
 fn main() -> ! {
@@ -70,9 +52,19 @@ fn main() -> ! {
     ];
     let mut color_idx = 0;
     let mut last_change = Instant::now();
+    let mut fps_timer = Instant::now();
+    let mut frame_count = 0u32;
 
     loop {
         display_frame(&mut pins, &fb);
+
+        frame_count += 1;
+        // Calcul du nombre de trames par seconde toutes les secondes
+        if fps_timer.elapsed() >= Duration::from_secs(1) {
+            println!("FPS: {}", frame_count);
+            frame_count = 0;
+            fps_timer = Instant::now();
+        }
 
         if last_change.elapsed() >= Duration::from_secs(1) {
             color_idx = (color_idx + 1) % colors.len();
