@@ -38,7 +38,7 @@ fn main() -> ! {
         Output::new(peripherals.GPIO15, Level::High, OutputConfig::default()),
     );
 
-    let mut fb = PixelMap::new();
+    let mut fb = PixelMap::<64, 64>::new();
     let colors = [
         Rgb565::white(),
         Rgb565::blue(),
@@ -58,7 +58,6 @@ fn main() -> ! {
         display_frame(&mut pins, &fb);
 
         frame_count += 1;
-        // Calcul du nombre de trames par seconde toutes les secondes
         if fps_timer.elapsed() >= Duration::from_secs(1) {
             println!("FPS: {}", frame_count);
             frame_count = 0;

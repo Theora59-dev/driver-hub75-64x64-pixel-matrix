@@ -1,20 +1,20 @@
-/// Couleur 16 bits au format RGB565 (5 bits rouge, 6 bits vert, 5 bits bleu).
+/// 16-bit RGB565 color (5 bits red, 6 bits green, 5 bits blue).
 ///
-/// Le stockage interne est un `u16` organisé ainsi, du MSB au LSB :
+/// Internal `u16` storage layout, MSB to LSB:
 /// ```text
 /// RRRR RGGG GGGB BBBB
 /// ```
-/// - bits 15–11 : rouge (5 bits, 32 niveaux)
-/// - bits 10–5  : vert (6 bits, 64 niveaux)
-/// - bits 4–0   : bleu (5 bits, 32 niveaux)
+/// - bits 15–11: red (5 bits, 32 levels)
+/// - bits 10–5:  green (6 bits, 64 levels)
+/// - bits 4–0:   blue (5 bits, 32 levels)
 #[derive(Clone, Copy)]
 pub struct Rgb565(u16);
 
 impl Rgb565 {
-    /// Crée une couleur RGB565 à partir de composantes 8 bits (0–255).
+    /// Creates an RGB565 color from 8-bit components (0–255).
     ///
-    /// Chaque composante est réduite au nombre de bits correspondant par
-    /// masquage des bits de poids faible.
+    /// Each component is reduced to its corresponding bit depth by
+    /// discarding the least significant bits.
     pub const fn new(r: u8, g: u8, b: u8) -> Rgb565 {
         let r = (r as u16 >> 3) & 0x1F;
         let g = (g as u16 >> 2) & 0x3F;
@@ -22,59 +22,59 @@ impl Rgb565 {
         Rgb565((r << 11) | (g << 5) | b)
     }
 
-    /// Retourne la valeur brute `u16` du pixel.
+    /// Returns the raw `u16` pixel value.
     pub const fn get_raw_color(&self) -> u16 {
         self.0
     }
 
-    /// Noir (toutes les LEDs éteintes).
+    /// Black (all LEDs off).
     pub const fn black() -> Self {
         Self(0)
     }
 
-    /// Rouge pur.
+    /// Pure red.
     pub const fn red() -> Self {
         Self(0xF800)
     }
 
-    /// Vert pur.
+    /// Pure green.
     pub const fn green() -> Self {
         Self(0x07E0)
     }
 
-    /// Bleu pur.
+    /// Blue.
     pub const fn blue() -> Self {
         Self(0x001F)
     }
 
-    /// Blanc (toutes les LEDs allumées).
+    /// White (all LEDs on).
     pub const fn white() -> Self {
         Self(0xFFFF)
     }
 
-    /// Jaune (rouge + vert).
+    /// Yellow (red + green).
     pub const fn yellow() -> Self {
         Self(0xFFE0)
     }
 
-    /// Cyan (vert + bleu).
+    /// Cyan (green + blue).
     pub const fn cyan() -> Self {
         Self(0x07FF)
     }
 
-    /// Magenta (rouge + bleu).
+    /// Magenta (red + blue).
     pub const fn magenta() -> Self {
         Self(0xF81F)
     }
 
-    /// Retourne vrai si au moins une composante de couleur est non nulle.
+    /// Returns `true` if at least one color component is non-zero.
     pub const fn non_zero(&self) -> bool {
         self.0 != 0
     }
 
-    /// Convertit la couleur en 3 booléens (rouge, vert, bleu) pour un
-    /// affichage 1‑bit. Chaque booléen indique si la composante correspondante
-    /// est active (vraie) ou éteinte (fausse). (Utile pour le débuggage)
+    /// Converts the color to 3 booleans (red, green, blue) for 1-bit
+    /// display. Each boolean indicates whether the corresponding component
+    /// is active (true) or off (false).
     pub const fn to_1bit(&self) -> (bool, bool, bool) {
         let r = (self.0 >> 11) & 0x1F != 0;
         let g = (self.0 >> 5) & 0x3F != 0;

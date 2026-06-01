@@ -1,29 +1,18 @@
 use esp_hal::gpio::Output;
 
-/// Pilote des 14 signaux HUB75 pour piloter une matrice LED.
+/// Driver for the 14 HUB75 signals used to control an RGB LED matrix.
 ///
-/// Chaque signal correspond à une broche GPIO configurée en sortie :
-/// - **R1, G1, B1** : données RGB de la moitié haute (lignes 0–31)
-/// - **R2, G2, B2** : données RGB de la moitié basse (lignes 32–63)
-/// - **A, B, C, D, E** : adresse de la paire de lignes (0–31 pour 1/32 scan)
-/// - **CLK** (horloge) : À chaque fois qu'on fait un « tic » sur CLK, le
-///   panneau décale les données d'un cran vers la droite, comme une file
-///   d'attente. C'est comme appuyer sur « Entrée » après chaque pixel pour
-///   le faire entrer dans la mémoire du panneau. On attend ~30 cycles CPU
-///   entre le front haut et le front bas pour que le registre ait le temps
-///   de réagir (fiche technique du SM52606P).
-/// - **LAT** (latch) : Une fois qu'on a décalé tous les pixels d'une ligne,
-///   on envoie un « petit coup » sur LAT pour tout figer d'un coup.
-///   Imagine que tu écris lettre par lettre sur un brouillon (shift), puis
-///   que tu fais un copier-coller vers le document final (latch). La pause
-///   est plus longue (> 100 ns) car le transfert est plus lent que le
-///   simple décalage.
-/// - **OE** (output enable) : C'est l'interrupteur général des LED.
-///   On laisse OE éteint (= `HIGH`) pendant qu'on remplit la ligne pour
-///   éviter que l'image précédente clignote n'importe comment. Ensuite on
-///   allume OE (= `LOW`) pour que la ligne s'affiche pendant un petit
-///   moment. En jouant sur le temps où OE reste allumé, on fait du
-///   « faux » PWM sans avoir besoin de vrais PWM matériels.
+/// Each signal corresponds to a GPIO output pin:
+/// - **R1, G1, B1**: RGB data for the top half (rows 0–31)
+/// - **R2, G2, B2**: RGB data for the bottom half (rows 32–63)
+/// - **A, B, C, D, E**: row address lines (0–31 for 1/32 scan)
+/// - **CLK** (clock): each rising edge shifts data one column forward
+///   into the panel's shift registers. A ~30-cycle delay between
+///   edges ensures sufficient hold time per the SM52606P datasheet.
+/// - **LAT** (latch): transfers shift-register contents to the output
+///   latches. Requires a longer pulse (>100 ns) than CLK.
+/// - **OE** (output enable): master LED switch. Active low —
+///   `LOW` turns LEDs on, `HIGH` turns them off.
 pub struct Hub75Pins<'d> {
     r1: Output<'d>,
     g1: Output<'d>,
@@ -41,8 +30,8 @@ pub struct Hub75Pins<'d> {
     oe: Output<'d>,
 }
 
-/// Micro-pause utilisée pour respecter les temps de maintien des signaux
-/// CLK et LAT. À 240 MHz, chaque itération dure environ 3–4 cycles.
+/// Micro-delay used to meet CLK and LAT signal hold times.
+/// At 240 MHz each iteration takes approximately 3–4 cycles.
 fn delay_ns(n: u32) {
     for _ in 0..n {
         core::hint::spin_loop();
@@ -50,10 +39,9 @@ fn delay_ns(n: u32) {
 }
 
 impl<'d> Hub75Pins<'d> {
-    /// Crée une nouvelle instance à partir des 14 sorties GPIO.
+    /// Creates a new instance from 14 GPIO outputs.
     ///
-    /// Chaque paramètre correspond à un signal HUB75. L'ordre est :
-    /// `r1, g1, b1, r2, g2, b2, a, b, c, d, e, clk, lat, oe`.
+    /// Parameter order: `r1, g1, b1, r2, g2, b2, a, b, c, d, e, clk, lat, oe`.
     pub fn new(
         r1: Output<'d>,
         g1: Output<'d>,
@@ -88,8 +76,8 @@ impl<'d> Hub75Pins<'d> {
         }
     }
 
-    /// Positionne les 5 bits d'adresse (A–E) pour sélectionner la paire de
-    /// lignes `row`. Pour un scan 1/32, `row` va de 0 à 31.
+    /// Sets the 5 address lines (A–E) to select the row pair `row`.
+    /// For a 1/32 scan panel `row` ranges from 0 to 31.
     pub fn set_row(&mut self, row: u8) {
         if row & 0x01 != 0 {
             self.a.set_high();
@@ -118,7 +106,7 @@ impl<'d> Hub75Pins<'d> {
         }
     }
 
-    /// Fixe l'état des 6 bits de données (R1,G1,B1, R2,G2,B2).
+    /// Sets the 6 data bits (R1, G1, B1, R2, G2, B2).
     pub fn set_data(&mut self, r1: bool, g1: bool, b1: bool, r2: bool, g2: bool, b2: bool) {
         if r1 {
             self.r1.set_high();
@@ -152,9 +140,9 @@ impl<'d> Hub75Pins<'d> {
         }
     }
 
-    /// Génère une impulsion sur CLK (front montant puis front descendant).
-    /// La micro-pause assure un temps haut suffisant pour le registre à
-    /// décalage du panneau (~120 ns à 240 MHz).
+    /// Generates a CLK pulse (rising then falling edge).
+    /// The micro-delay ensures sufficient high time for the panel's
+    /// shift register (~120 ns at 240 MHz).
     pub fn pulse_clk(&mut self) {
         self.clk.set_high();
         delay_ns(30);
@@ -162,19 +150,17 @@ impl<'d> Hub75Pins<'d> {
         delay_ns(30);
     }
 
-    /// Génère une impulsion sur LAT pour transférer le contenu des
-    /// registres à décalage vers les sorties. La pause est plus longue
-    /// que celle de CLK (~400 ns).
+    /// Generates a LAT pulse to transfer shift-register contents
+    /// to the output latches. The delay is longer than for CLK (~400 ns).
     pub fn latch(&mut self) {
         self.lat.set_high();
         delay_ns(100);
         self.lat.set_low();
     }
 
-    /// Active (`true`) ou désactive (`false`) la sortie des LEDs.
+    /// Enables (`true`) or disables (`false`) the LED output.
     ///
-    /// # Rappel
-    /// Le signal OE est actif bas : `LOW` = LEDs allumées.
+    /// Note: OE is active low — `LOW` turns LEDs on.
     pub fn set_oe_enabled(&mut self, enabled: bool) {
         if enabled {
             self.oe.set_low();
@@ -183,19 +169,19 @@ impl<'d> Hub75Pins<'d> {
         }
     }
 
-    /// Shifte un pixel (6 bits) dans les registres : pose les données
-    /// puis envoie une impulsion CLK.
+    /// Shifts one pixel (6 bits) into the shift registers: sets the data
+    /// lines then pulses CLK.
     pub fn shift_pixel(&mut self, r1: bool, g1: bool, b1: bool, r2: bool, g2: bool, b2: bool) {
         self.set_data(r1, g1, b1, r2, g2, b2);
         self.pulse_clk();
     }
 
-    /// Éteint les LEDs (OE = HIGH).
+    /// Turns LEDs off (OE = HIGH).
     pub fn oe_off(&mut self) {
         self.oe.set_high();
     }
 
-    /// Allume les LEDs (OE = LOW).
+    /// Turns LEDs on (OE = LOW).
     pub fn oe_on(&mut self) {
         self.oe.set_low();
     }

@@ -3,14 +3,21 @@ mod color;
 use crate::hub75::Hub75Pins;
 pub use color::Rgb565;
 
-pub fn display_frame(pins: &mut Hub75Pins, fb: &PixelMap) {
-    for row in 0..32u8 {
+/// Renders one full frame to the HUB75 panel.
+///
+/// Sequences through all `H/2` scanline pairs, shifting `W` pixels per row pair,
+/// latching, and displaying each row for a brief period (busy-wait).
+///
+/// `W` is the panel width in columns, `H` the panel height in rows.
+pub fn display_frame<const W: usize, const H: usize>(pins: &mut Hub75Pins, fb: &PixelMap<W, H>) {
+    let scan_pairs = H / 2;
+    for row in 0..scan_pairs {
         pins.oe_off();
-        pins.set_row(row);
+        pins.set_row(row as u8);
 
-        for col in 0..64u8 {
-            let (r1, g1, b1) = fb.read(col as usize, row as usize).to_1bit();
-            let (r2, g2, b2) = fb.read(col as usize, (row as usize) + 32).to_1bit();
+        for col in 0..W {
+            let (r1, g1, b1) = fb.read(col, row).to_1bit();
+            let (r2, g2, b2) = fb.read(col, row + scan_pairs).to_1bit();
             pins.shift_pixel(r1, g1, b1, r2, g2, b2);
         }
 
@@ -24,62 +31,61 @@ pub fn display_frame(pins: &mut Hub75Pins, fb: &PixelMap) {
     pins.oe_off();
 }
 
-/// Dimensions du panneau : 64×64 pixels.
-pub const WIDTH: usize = 64;
-pub const HEIGHT: usize = 64;
-
-/// Framebuffer stockant une image de `WIDTH × HEIGHT` pixels en RGB565.
-/// Le stockage est un tableau plat indexé par `y * WIDTH + x`.
-/// Les accès hors limites sont silencieusement ignorés (clipping).
-pub struct PixelMap {
-    pixels: [Rgb565; WIDTH * HEIGHT],
+/// Framebuffer storing a `W × H` image in RGB565 format.
+///
+/// Storage is a 2D array indexed as `pixels[y][x]`.
+/// Out-of-bounds accesses are silently ignored (clipped).
+pub struct PixelMap<const W: usize, const H: usize> {
+    pixels: [[Rgb565; W]; H],
 }
 
-impl PixelMap {
-    /// Crée un nouveau framebuffer initialisé en noir.
+impl<const W: usize, const H: usize> PixelMap<W, H> {
+    /// Creates a new framebuffer initialized to black.
     pub const fn new() -> Self {
         Self {
-            pixels: [Rgb565::black(); WIDTH * HEIGHT],
+            pixels: [[Rgb565::black(); W]; H],
         }
     }
 
-    /// Écrit un pixel aux coordonnées `(x, y)`.
-    /// Les coordonnées hors limites sont ignorées.
+    /// Writes a pixel at coordinates `(x, y)`.
+    /// Out-of-bounds coordinates are silently ignored.
     pub fn write_color_at(&mut self, x: usize, y: usize, color: Rgb565) {
-        if x < WIDTH && y < HEIGHT {
-            self.pixels[y * WIDTH + x] = color;
+        if x < W && y < H {
+            self.pixels[y][x] = color;
         }
     }
 
-    /// Lit le pixel aux coordonnées `(x, y)`.
-    /// Retourne `Rgb565::black()` si les coordonnées sont hors limites.
+    /// Reads the pixel at coordinates `(x, y)`.
+    /// Returns `Rgb565::black()` if out of bounds.
     pub fn read(&self, x: usize, y: usize) -> Rgb565 {
-        if x < WIDTH && y < HEIGHT {
-            self.pixels[y * WIDTH + x]
+        if x < W && y < H {
+            self.pixels[y][x]
         } else {
             Rgb565::black()
         }
     }
 
-    /// Remplit tout le framebuffer avec une couleur uniforme.
+    /// Fills the entire framebuffer with a uniform color.
     pub fn fill(&mut self, color: Rgb565) {
-        for pixel in self.pixels.iter_mut() {
-            *pixel = color;
+        for row in self.pixels.iter_mut() {
+            for pixel in row.iter_mut() {
+                *pixel = color;
+            }
         }
     }
 
-    /// Efface tout le framebuffer (remet à noir).
+    /// Clears the entire framebuffer to black.
     pub fn clear(&mut self) {
         self.fill(Rgb565::black());
     }
 
-    /// Retourne une référence sur le tableau brut de pixels.
-    pub fn pixels(&self) -> &[Rgb565; WIDTH * HEIGHT] {
+    /// Returns a reference to the raw pixel array.
+    pub fn pixels(&self) -> &[[Rgb565; W]; H] {
         &self.pixels
     }
 }
 
-impl Default for PixelMap {
+impl<const W: usize, const H: usize> Default for PixelMap<W, H> {
     fn default() -> Self {
         Self::new()
     }
