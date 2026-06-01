@@ -1,6 +1,7 @@
 mod color;
 
 use crate::hub75::Hub75Pins;
+use embedded_hal::digital::OutputPin;
 pub use color::Rgb565;
 
 /// Number of busy-wait iterations per row to control LED persistence
@@ -14,7 +15,7 @@ const ROW_DISPLAY_CYCLES: u32 = 20_000;
 /// latching, and displaying each row for a brief period (busy-wait).
 ///
 /// `W` is the panel width in columns, `H` the panel height in rows.
-pub fn display_frame<const W: usize, const H: usize>(pins: &mut Hub75Pins, fb: &PixelMap<W, H>) {
+pub fn display_frame<const W: usize, const H: usize, P: OutputPin>(pins: &mut Hub75Pins<P>, fb: &PixelMap<W, H>) {
     let scan_pairs = H / 2;
     for row in 0..scan_pairs {
         pins.oe_off();

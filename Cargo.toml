@@ -11,13 +11,14 @@ keywords     = ["esp32", "hub75", "led-matrix", "embedded", "no-std"]
 categories   = ["embedded", "hardware-support"]
 
 [dependencies]
-esp-hal                  = { version = "~1.1.0", features = ["esp32"] }
-critical-section         = "1.2.0"
-esp-bootloader-esp-idf   = { version = "0.5.0", features = ["esp32"] }
-esp-println              = { version = "0.17.0", features = ["esp32"] }
+embedded-hal = "1.0.0"
+
+[dev-dependencies]
+esp-hal                = { version = "~1.1.0", features = ["esp32"] }
+esp-bootloader-esp-idf = { version = "0.5.0", features = ["esp32"] }
+esp-println            = { version = "0.17.0", features = ["esp32"] }
 
 [package.metadata.docs.rs]
-all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [profile.dev]

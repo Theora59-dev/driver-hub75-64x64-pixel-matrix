@@ -1,4 +1,4 @@
-use esp_hal::gpio::Output;
+use embedded_hal::digital::OutputPin;
 
 /// Driver for the 14 HUB75 signals used to control an RGB LED matrix.
 ///
@@ -13,21 +13,21 @@ use esp_hal::gpio::Output;
 ///   latches. Requires a longer pulse (>100 ns) than CLK.
 /// - **OE** (output enable): master LED switch. Active low —
 ///   `LOW` turns LEDs on, `HIGH` turns them off.
-pub struct Hub75Pins<'d> {
-    r1: Output<'d>,
-    g1: Output<'d>,
-    b1: Output<'d>,
-    r2: Output<'d>,
-    g2: Output<'d>,
-    b2: Output<'d>,
-    a: Output<'d>,
-    b: Output<'d>,
-    c: Output<'d>,
-    d: Output<'d>,
-    e: Output<'d>,
-    clk: Output<'d>,
-    lat: Output<'d>,
-    oe: Output<'d>,
+pub struct Hub75Pins<P> {
+    r1: P,
+    g1: P,
+    b1: P,
+    r2: P,
+    g2: P,
+    b2: P,
+    a: P,
+    b: P,
+    c: P,
+    d: P,
+    e: P,
+    clk: P,
+    lat: P,
+    oe: P,
 }
 
 /// Busy-wait spin loop used to meet CLK and LAT signal hold times.
@@ -39,25 +39,25 @@ fn delay_spin(n: u32) {
     }
 }
 
-impl<'d> Hub75Pins<'d> {
+impl<P: OutputPin> Hub75Pins<P> {
     /// Creates a new instance from 14 GPIO outputs.
     ///
     /// Parameter order: `r1, g1, b1, r2, g2, b2, a, b, c, d, e, clk, lat, oe`.
     pub fn new(
-        r1: Output<'d>,
-        g1: Output<'d>,
-        b1: Output<'d>,
-        r2: Output<'d>,
-        g2: Output<'d>,
-        b2: Output<'d>,
-        a: Output<'d>,
-        b: Output<'d>,
-        c: Output<'d>,
-        d: Output<'d>,
-        e: Output<'d>,
-        clk: Output<'d>,
-        lat: Output<'d>,
-        oe: Output<'d>,
+        r1: P,
+        g1: P,
+        b1: P,
+        r2: P,
+        g2: P,
+        b2: P,
+        a: P,
+        b: P,
+        c: P,
+        d: P,
+        e: P,
+        clk: P,
+        lat: P,
+        oe: P,
     ) -> Self {
         Self {
             r1,
@@ -81,63 +81,63 @@ impl<'d> Hub75Pins<'d> {
     /// For a 1/32 scan panel `row` ranges from 0 to 31.
     pub fn set_row(&mut self, row: u8) {
         if row & 0x01 != 0 {
-            self.a.set_high();
+            self.a.set_high().ok();
         } else {
-            self.a.set_low();
+            self.a.set_low().ok();
         }
         if row & 0x02 != 0 {
-            self.b.set_high();
+            self.b.set_high().ok();
         } else {
-            self.b.set_low();
+            self.b.set_low().ok();
         }
         if row & 0x04 != 0 {
-            self.c.set_high();
+            self.c.set_high().ok();
         } else {
-            self.c.set_low();
+            self.c.set_low().ok();
         }
         if row & 0x08 != 0 {
-            self.d.set_high();
+            self.d.set_high().ok();
         } else {
-            self.d.set_low();
+            self.d.set_low().ok();
         }
         if row & 0x10 != 0 {
-            self.e.set_high();
+            self.e.set_high().ok();
         } else {
-            self.e.set_low();
+            self.e.set_low().ok();
         }
     }
 
     /// Sets the 6 data bits (R1, G1, B1, R2, G2, B2).
     pub fn set_data(&mut self, r1: bool, g1: bool, b1: bool, r2: bool, g2: bool, b2: bool) {
         if r1 {
-            self.r1.set_high();
+            self.r1.set_high().ok();
         } else {
-            self.r1.set_low();
+            self.r1.set_low().ok();
         }
         if g1 {
-            self.g1.set_high();
+            self.g1.set_high().ok();
         } else {
-            self.g1.set_low();
+            self.g1.set_low().ok();
         }
         if b1 {
-            self.b1.set_high();
+            self.b1.set_high().ok();
         } else {
-            self.b1.set_low();
+            self.b1.set_low().ok();
         }
         if r2 {
-            self.r2.set_high();
+            self.r2.set_high().ok();
         } else {
-            self.r2.set_low();
+            self.r2.set_low().ok();
         }
         if g2 {
-            self.g2.set_high();
+            self.g2.set_high().ok();
         } else {
-            self.g2.set_low();
+            self.g2.set_low().ok();
         }
         if b2 {
-            self.b2.set_high();
+            self.b2.set_high().ok();
         } else {
-            self.b2.set_low();
+            self.b2.set_low().ok();
         }
     }
 
@@ -145,18 +145,18 @@ impl<'d> Hub75Pins<'d> {
     /// The spin-loop ensures sufficient high time for the panel's
     /// shift register (~120 ns at 240 MHz).
     pub fn pulse_clk(&mut self) {
-        self.clk.set_high();
+        self.clk.set_high().ok();
         delay_spin(30);
-        self.clk.set_low();
+        self.clk.set_low().ok();
         delay_spin(30);
     }
 
     /// Generates a LAT pulse to transfer shift-register contents
     /// to the output latches. The spin-loop is longer than for CLK (~400 ns).
     pub fn latch(&mut self) {
-        self.lat.set_high();
+        self.lat.set_high().ok();
         delay_spin(100);
-        self.lat.set_low();
+        self.lat.set_low().ok();
     }
 
     /// Shifts one pixel (6 bits) into the shift registers: sets the data
@@ -168,11 +168,11 @@ impl<'d> Hub75Pins<'d> {
 
     /// Turns LEDs off (OE = HIGH).
     pub fn oe_off(&mut self) {
-        self.oe.set_high();
+        self.oe.set_high().ok();
     }
 
     /// Turns LEDs on (OE = LOW).
     pub fn oe_on(&mut self) {
-        self.oe.set_low();
+        self.oe.set_low().ok();
     }
 }
