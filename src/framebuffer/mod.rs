@@ -3,6 +3,11 @@ mod color;
 use crate::hub75::Hub75Pins;
 pub use color::Rgb565;
 
+/// Number of busy-wait iterations per row to control LED persistence
+/// (and thus brightness). CPU-speed dependent — at 240 MHz this yields
+/// roughly the correct on-time for 1/32 scan panels.
+const ROW_DISPLAY_CYCLES: u32 = 20_000;
+
 /// Renders one full frame to the HUB75 panel.
 ///
 /// Sequences through all `H/2` scanline pairs, shifting `W` pixels per row pair,
@@ -23,7 +28,7 @@ pub fn display_frame<const W: usize, const H: usize>(pins: &mut Hub75Pins, fb: &
 
         pins.latch();
         pins.oe_on();
-        for _ in 0..20000 {
+        for _ in 0..ROW_DISPLAY_CYCLES {
             core::hint::spin_loop();
         }
     }

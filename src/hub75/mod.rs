@@ -30,9 +30,10 @@ pub struct Hub75Pins<'d> {
     oe: Output<'d>,
 }
 
-/// Micro-delay used to meet CLK and LAT signal hold times.
-/// At 240 MHz each iteration takes approximately 3–4 cycles.
-fn delay_ns(n: u32) {
+/// Busy-wait spin loop used to meet CLK and LAT signal hold times.
+/// The actual delay depends on the CPU clock speed. At 240 MHz each
+/// iteration takes approximately 3–4 cycles.
+fn delay_spin(n: u32) {
     for _ in 0..n {
         core::hint::spin_loop();
     }
@@ -141,32 +142,21 @@ impl<'d> Hub75Pins<'d> {
     }
 
     /// Generates a CLK pulse (rising then falling edge).
-    /// The micro-delay ensures sufficient high time for the panel's
+    /// The spin-loop ensures sufficient high time for the panel's
     /// shift register (~120 ns at 240 MHz).
     pub fn pulse_clk(&mut self) {
         self.clk.set_high();
-        delay_ns(30);
+        delay_spin(30);
         self.clk.set_low();
-        delay_ns(30);
+        delay_spin(30);
     }
 
     /// Generates a LAT pulse to transfer shift-register contents
-    /// to the output latches. The delay is longer than for CLK (~400 ns).
+    /// to the output latches. The spin-loop is longer than for CLK (~400 ns).
     pub fn latch(&mut self) {
         self.lat.set_high();
-        delay_ns(100);
+        delay_spin(100);
         self.lat.set_low();
-    }
-
-    /// Enables (`true`) or disables (`false`) the LED output.
-    ///
-    /// Note: OE is active low — `LOW` turns LEDs on.
-    pub fn set_oe_enabled(&mut self, enabled: bool) {
-        if enabled {
-            self.oe.set_low();
-        } else {
-            self.oe.set_high();
-        }
     }
 
     /// Shifts one pixel (6 bits) into the shift registers: sets the data

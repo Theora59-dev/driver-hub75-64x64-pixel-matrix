@@ -10,10 +10,6 @@ repository   = "https://github.com/Theora59-dev/driver-hub75-64x64-pixel-matrix"
 keywords     = ["esp32", "hub75", "led-matrix", "embedded", "no-std"]
 categories   = ["embedded", "hardware-support"]
 
-[[bin]]
-name = "driver-64x64-pixel-matrix"
-path = "./src/bin/main.rs"
-
 [dependencies]
 esp-hal                  = { version = "~1.1.0", features = ["esp32"] }
 critical-section         = "1.2.0"
