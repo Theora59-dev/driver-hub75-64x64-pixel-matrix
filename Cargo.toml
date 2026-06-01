@@ -3,23 +3,38 @@ edition      = "2024"
 name         = "driver-64x64-pixel-matrix"
 authors      = ["Theora59-dev"]
 rust-version = "1.88"
-version      = "0.2.0"
+version      = "0.2.1"
 description  = "HUB75 RGB LED matrix driver for ESP32 (64x64, 1/32 scan)"
 license      = "MIT"
 repository   = "https://github.com/Theora59-dev/driver-hub75-64x64-pixel-matrix"
 keywords     = ["esp32", "hub75", "led-matrix", "embedded", "no-std"]
 categories   = ["embedded", "hardware-support"]
 
-[dependencies]
-embedded-hal = "1.0.0"
+[features]
+default     = ["hardware"]
+hardware    = ["dep:esp-hal", "dep:esp-bootloader-esp-idf", "dep:esp-println"]
 
-[dev-dependencies]
-esp-hal                = { version = "~1.1.0", features = ["esp32"] }
-esp-bootloader-esp-idf = { version = "0.5.0", features = ["esp32"] }
-esp-println            = { version = "0.17.0", features = ["esp32"] }
+[dependencies]
+embedded-hal            = "1.0.0"
+esp-hal                 = { version = "~1.1.0", features = ["esp32"], optional = true }
+esp-bootloader-esp-idf  = { version = "0.5.0", features = ["esp32"], optional = true }
+esp-println             = { version = "0.17.0", features = ["esp32"], optional = true }
+
+[[example]]
+name = "color_bars"
+required-features = ["hardware"]
+
+[[example]]
+name = "checkerboard"
+required-features = ["hardware"]
+
+[[example]]
+name = "solid_colors"
+required-features = ["hardware"]
 
 [package.metadata.docs.rs]
 rustdoc-args = ["--cfg", "docsrs"]
+no-default-features = true
 
 [profile.dev]
 opt-level = "s"
