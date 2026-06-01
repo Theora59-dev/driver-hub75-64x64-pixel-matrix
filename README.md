@@ -6,7 +6,7 @@ HUB75 RGB LED matrix driver for ESP32. Designed for 64×64 panels in 1/32 scan, 
 
 - Bit-bang HUB75 protocol over GPIO (no RMT/I2S required)
 - 1-bit-per-color display (8 colors)
-- Configurable panel size via const generics (`PixelMap<W, H>`)
+- Configurable panel size via generics (`PixelMap<W, H>`)
 - `no_std` compatible
 - FPS counter in demo binaries
 

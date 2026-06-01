@@ -32,12 +32,12 @@ impl Rgb565 {
         Self(0)
     }
 
-    /// Pure red.
+    /// Red.
     pub const fn red() -> Self {
         Self(0xF800)
     }
 
-    /// Pure green.
+    /// Green.
     pub const fn green() -> Self {
         Self(0x07E0)
     }
