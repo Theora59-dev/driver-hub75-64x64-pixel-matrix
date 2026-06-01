@@ -1,13 +1,12 @@
 #![no_std]
 #![no_main]
 
+use driver_64x64_pixel_matrix::framebuffer::{PixelMap, Rgb565, display_frame};
+use driver_64x64_pixel_matrix::hub75::Hub75Pins;
 use esp_hal::clock::CpuClock;
 use esp_hal::gpio::{Level, Output, OutputConfig};
 use esp_hal::main;
 use esp_hal::time::{Duration, Instant};
-
-use driver_64x64_pixel_matrix::framebuffer::{PixelMap, Rgb565, display_frame};
-use driver_64x64_pixel_matrix::hub75::Hub75Pins;
 use esp_println::println;
 
 #[panic_handler]
