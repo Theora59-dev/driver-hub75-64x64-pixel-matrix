@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-use driver_64x64_pixel_matrix::{display_frame, Hub75Pins, PixelMap, Rgb565};
+use driver_64x64_pixel_matrix::{Hub75Pins, PixelMap, Rgb565, display_frame};
 use esp_hal::clock::CpuClock;
 use esp_hal::gpio::{Level, Output, OutputConfig};
 use esp_hal::main;
@@ -44,7 +44,15 @@ fn main() -> ! {
     for y in 0..64 {
         for x in 0..64 {
             let is_white = (x / 8 + y / 8) % 2 == 0;
-            fb.write_color_at(x, y, if is_white { Rgb565::white() } else { Rgb565::black() });
+            fb.write_color_at(
+                x,
+                y,
+                if is_white {
+                    Rgb565::white()
+                } else {
+                    Rgb565::black()
+                },
+            );
         }
     }
 

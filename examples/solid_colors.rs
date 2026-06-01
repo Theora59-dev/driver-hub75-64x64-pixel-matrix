@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-use driver_64x64_pixel_matrix::{display_frame, Hub75Pins, PixelMap, Rgb565};
+use driver_64x64_pixel_matrix::{Hub75Pins, PixelMap, Rgb565, display_frame};
 use esp_hal::clock::CpuClock;
 use esp_hal::gpio::{Level, Output, OutputConfig};
 use esp_hal::main;
