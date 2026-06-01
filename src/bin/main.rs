@@ -5,7 +5,6 @@ use esp_hal::clock::CpuClock;
 use esp_hal::gpio::{Level, Output, OutputConfig};
 use esp_hal::main;
 use esp_hal::time::{Duration, Instant};
-use esp_println::println;
 
 use driver_64x64_pixel_matrix::framebuffer::{PixelMap, Rgb565};
 use driver_64x64_pixel_matrix::hub75::Hub75Pins;
@@ -13,11 +12,6 @@ use driver_64x64_pixel_matrix::hub75::Hub75Pins;
 #[panic_handler]
 fn panic(_: &core::panic::PanicInfo) -> ! {
     loop {}
-}
-
-fn delay(duration: Duration) {
-    let start = Instant::now();
-    while start.elapsed() < duration {}
 }
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -74,18 +68,16 @@ fn main() -> ! {
         Rgb565::cyan(),
         Rgb565::magenta(),
     ];
+    let mut color_idx = 0;
+    let mut last_change = Instant::now();
 
-    for color in colors {
-        for y in 0..64 {
-            for x in 0..64 {
-                fb.write_color_at(x, y, color);
-            }
-        }
+    loop {
         display_frame(&mut pins, &fb);
-        delay(Duration::from_secs(1));
+
+        if last_change.elapsed() >= Duration::from_secs(1) {
+            color_idx = (color_idx + 1) % colors.len();
+            fb.fill(colors[color_idx]);
+            last_change = Instant::now();
+        }
     }
-
-    println!("Affichage !");
-
-    loop {}
 }
